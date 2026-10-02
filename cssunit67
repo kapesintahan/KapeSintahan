@@ -1,0 +1,137 @@
+/******************************************************************
+ * UNIT 6 & 7: WORKFLOW STATE MACHINE & ROLE-AWARE INTERFACE
+ ******************************************************************/
+
+/* Unit 7: Role Switcher Header Bar */
+.role-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background-color: var(--surface-muted, #f8f9fa);
+  border: 1px solid var(--border-color, #e0e0e0);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.role-bar label {
+  font-weight: 600;
+  color: var(--text-color, #333);
+}
+
+.role-bar select {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background-color: #ffffff;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+/* Base Badge Styling */
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Unit 6: Workflow Status Colors */
+.status-pending   { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+.status-confirmed { background-color: #cce5ff; color: #004085; border: 1px solid #b8daff; }
+.status-preparing { background-color: #e2e3e5; color: #383d41; border: 1px solid #d6d8db; }
+.status-ready     { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.status-completed { background-color: #d6d8d9; color: #1b1e21; border: 1px solid #c6c8ca; }
+.status-cancelled { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+/* Unit 6: Kitchen Dashboard & Order Cards Layout */
+.orders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.order-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.25rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.order-card h3 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+  color: #1a202c;
+}
+
+.order-card p {
+  margin: 0.35rem 0;
+  font-size: 0.95rem;
+}
+
+/* Action Buttons Region */
+.actions-region {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.85rem 0;
+}
+
+.btn-action-status {
+  background-color: #3182ce;
+  color: #ffffff;
+  border: none;
+  padding: 0.4rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.btn-action-status:hover {
+  background-color: #2b6cb0;
+}
+
+/* Audit History Dropdown Section */
+.history-log {
+  margin-top: 0.75rem;
+  border-top: 1px dashed #cbd5e0;
+  padding-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #4a5568;
+}
+
+.history-log summary {
+  cursor: pointer;
+  font-weight: 600;
+  user-select: none;
+}
+
+.history-log ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin: 0.5rem 0 0 0;
+}
+
+.history-log li {
+  padding: 0.2rem 0;
+  border-bottom: 1px dotted #edf2f7;
+}
+
+.empty-msg {
+  color: #718096;
+  font-style: italic;
+}
