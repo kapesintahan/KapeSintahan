@@ -1,0 +1,192 @@
+/******************************************************************
+ * UNIT 6 & 7: WORKFLOW STATE MACHINE & ROLE PERMISSIONS ENGINE
+ ******************************************************************/
+
+// 1. EXTEND APPLICATION STATE WITH SESSION & PERSONAS
+if (!state.session) {
+  state.session = {
+    userId: "USR-001",
+    userName: "Walk-in Guest",
+    activeRole: "CUSTOMER" // Options: "CUSTOMER" | "STAFF" | "ADMIN"
+  };
+}
+
+if (!state.orders) {
+  state.orders = []; // Container for tracked customer orders
+}
+
+// 2. PERMISSION MATRIX DEFINITION (UNIT 7)
+const ROLE_PERMISSIONS = {
+  CUSTOMER: new Set(["menu:view", "order:create", "order:view-own"]),
+  STAFF:    new Set(["menu:view", "order:create", "order:view-own", "order:view-all", "order:update-status"]),
+  ADMIN:    new Set(["menu:view", "order:create", "order:view-own", "order:view-all", "order:update-status", "menu:manage-items", "metrics:view-dashboard"])
+};
+
+/**
+ * Central Permission Guard Helper
+ */
+function hasPermission(permission, recordOwnerId = null) {
+  const currentRole = state.session.activeRole;
+  const permissions = ROLE_PERMISSIONS[currentRole];
+
+  if (!permissions || !permissions.has(permission)) return false;
+
+  if (permission === "order:view-own" && recordOwnerId) {
+    if (currentRole === "CUSTOMER" && recordOwnerId !== state.session.userId) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Role Switcher Event Handler
+ */
+function switchUserRole(newRole) {
+  state.session.activeRole = newRole;
+  state.session.userName = newRole === "CUSTOMER" ? "Walk-in Guest" : `${newRole} User`;
+  
+  const badge = document.getElementById("role-badge");
+  if (badge) {
+    badge.textContent = newRole;
+    badge.className = `badge status-${newRole === "CUSTOMER" ? "pending" : newRole === "STAFF" ? "confirmed" : "ready"}`;
+  }
+
+  console.log(`[UNIT 7] Persona switched to: ${newRole}`);
+  render();
+}
+
+// 3. WORKFLOW STATE MACHINE TRANSITION RULES (UNIT 6)
+const ORDER_TRANSITIONS = {
+  PENDING:   ["CONFIRMED", "CANCELLED"],
+  CONFIRMED: ["PREPARING", "CANCELLED"],
+  PREPARING: ["READY", "CANCELLED"],
+  READY:     ["COMPLETED"],
+  COMPLETED: [],
+  CANCELLED: []
+};
+
+/**
+ * Transition Guard Checker
+ */
+function canTransition(currentStatus, targetStatus) {
+  if (!ORDER_TRANSITIONS[currentStatus]) return false;
+  return ORDER_TRANSITIONS[currentStatus].includes(targetStatus);
+}
+
+/**
+ * Guarded Action Handler for State Changes
+ */
+function transitionOrderStatus(orderId, nextStatus, actionLabel) {
+  // Permission Guard Check
+  if (!hasPermission("order:update-status")) {
+    alert("Permission Denied: Your current persona cannot update kitchen orders.");
+    return;
+  }
+
+  const order = state.orders?.find(o => o.id === orderId);
+  if (!order) {
+    console.error(`Order #${orderId} not found.`);
+    return;
+  }
+
+  // State Transition Guard Check
+  if (!canTransition(order.status, nextStatus)) {
+    console.error(`[WORKFLOW ERROR] Invalid state jump: ${order.status} ➔ ${nextStatus}`);
+    alert(`Illegal transition: Cannot move order directly from '${order.status}' to '${nextStatus}'.`);
+    return;
+  }
+
+  const prevStatus = order.status;
+  order.status = nextStatus;
+
+  // Append Audit Log Entry
+  if (!order.statusHistory) order.statusHistory = [];
+  order.statusHistory.push({
+    timestamp: new Date().toLocaleTimeString(),
+    fromStatus: prevStatus,
+    toStatus: nextStatus,
+    action: actionLabel || `Moved to ${nextStatus}`,
+    updatedBy: state.session.userName
+  });
+
+  console.log(`[WORKFLOW SUCCESS] Order #${orderId} changed from ${prevStatus} ➔ ${nextStatus}`);
+  render();
+}
+
+// 4. DYNAMIC KITCHEN ORDER CARDS RENDERER
+function renderWorkflowView() {
+  const workflowSection = document.getElementById("workflow-section");
+  const container = document.getElementById("kitchen-orders-list");
+  
+  if (!workflowSection || !container) return;
+
+  // Hide section if role lacks permission to view all kitchen orders
+  if (!hasPermission("order:view-all")) {
+    workflowSection.hidden = true;
+    return;
+  }
+
+  workflowSection.hidden = false;
+  container.innerHTML = "";
+
+  if (!state.orders || state.orders.length === 0) {
+    container.innerHTML = "<p class='empty-msg'>No active kitchen orders in queue.</p>";
+    return;
+  }
+
+  // Build order cards dynamically
+  state.orders.forEach(order => {
+    const allowedNext = ORDER_TRANSITIONS[order.status] || [];
+    
+    // Generate valid action buttons based on current state
+    const actionButtonsHTML = allowedNext.map(nextState => `
+      <button type="button" 
+              class="btn-action-status" 
+              onclick="transitionOrderStatus('${order.id}', '${nextState}', 'Advance to ${nextState}')">
+        Mark as ${nextState}
+      </button>
+    `).join(" ");
+
+    // Generate audit trail history list items
+    const historyHTML = (order.statusHistory || []).map(h => `
+      <li><small>${h.timestamp}</small> - <b>${h.fromStatus} ➔ ${h.toStatus}</b> by ${h.updatedBy}</li>
+    `).join("");
+
+    const card = document.createElement("div");
+    card.className = "order-card";
+    card.style.border = "1px solid #ccc";
+    card.style.padding = "1rem";
+    card.style.borderRadius = "8px";
+    card.style.marginBottom = "1rem";
+
+    card.innerHTML = `
+      <h3>Order #${order.id}</h3>
+      <p>Customer: <b>${order.customerName || "Walk-in Guest"}</b></p>
+      <p>Status: <span class="badge status-${order.status.toLowerCase()}">${order.status}</span></p>
+      <div class="actions-region" style="margin: 0.5rem 0;">
+        ${actionButtonsHTML || "<em>Terminal State (No further actions)</em>"}
+      </div>
+      <details class="history-log">
+        <summary>Status Audit Log (${(order.statusHistory || []).length})</summary>
+        <ul>${historyHTML || "<li>No transitions recorded yet.</li>"}</ul>
+      </details>
+    `;
+    
+    container.appendChild(card);
+  });
+}
+
+// 5. HOOK INTO MAIN RENDER LOOP
+// Ensures workflow view re-renders whenever application state changes
+if (typeof render === "function") {
+  const originalRender = render;
+  render = function() {
+    originalRender();
+    renderWorkflowView();
+  };
+} else {
+  function render() {
+    renderWorkflowView();
+  }
+}
