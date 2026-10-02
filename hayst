@@ -1,0 +1,29 @@
+// BRIDGE FUNCTION: Connects your existing cart to state.orders
+function submitCustomerOrder(customerNameInputId = "customer-name") {
+  if (!state.cart || state.cart.length === 0) {
+    alert("Your cart is empty!");
+    return;
+  }
+
+  const nameInput = document.getElementById(customerNameInputId);
+  const customerName = nameInput && nameInput.value ? nameInput.value : "Walk-in Guest";
+
+  const newOrder = {
+    id: "ORD-" + Math.floor(1000 + Math.random() * 9000),
+    customerName: customerName,
+    items: [...state.cart],
+    total: state.cart.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0),
+    status: "PENDING",
+    timestamp: new Date().toLocaleTimeString()
+  };
+
+  if (!state.orders) state.orders = [];
+  state.orders.push(newOrder);
+
+  // Clear cart and notify
+  state.cart = [];
+  alert(`Order #${newOrder.id} submitted!`);
+
+  // Refresh UI
+  renderApp();
+}
