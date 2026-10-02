@@ -1,0 +1,163 @@
+<!-- Inside <main id="app"> -->
+<section id="admin-section" aria-labelledby="admin-title" class="app-section" hidden>
+  <div class="section-header">
+    <h2 id="admin-title">Store Admin - Pending Customer Orders</h2>
+    <p>Overview of all orders currently waiting for confirmation or processing.</p>
+  </div>
+
+  <div class="table-container">
+    <table class="admin-orders-table">
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Customer</th>
+          <th>Items Ordered</th>
+          <th>Total Price</th>
+          <th>Status</th>
+          <th>Time Placed</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="admin-pending-orders-body">
+        <!-- JS will render rows here dynamically -->
+      </tbody>
+    </table>
+  </div>
+</section>
+
+/******************************************************************
+ * ADMIN PENDING ORDERS TABLE RENDERER (UNIT 7)
+ ******************************************************************/
+
+function renderAdminView() {
+  const adminSection = document.getElementById("admin-section");
+  const tableBody = document.getElementById("admin-pending-orders-body");
+
+  if (!adminSection || !tableBody) return;
+
+  // Only display this section if current role is ADMIN
+  if (state.session.activeRole !== "ADMIN") {
+    adminSection.hidden = true;
+    return;
+  }
+
+  adminSection.hidden = false;
+  tableBody.innerHTML = "";
+
+  // Filter pending orders from state
+  const pendingOrders = (state.orders || []).filter(o => o.status === "PENDING");
+
+  if (pendingOrders.length === 0) {
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="7" class="empty-table-msg">No pending orders at the moment.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  // Render each pending order as a table row
+  pendingOrders.forEach(order => {
+    // Format item list display
+    const itemsSummary = (order.items || [])
+      .map(item => `${item.quantity || 1}x ${item.name || item.title}`)
+      .join(", ") || "No items recorded";
+
+    // Calculate total price if available
+    const totalAmount = order.total 
+      ? `₱${Number(order.total).toFixed(2)}` 
+      : (order.items || []).reduce((sum, i) => sum + ((i.price || 0) * (i.quantity || 1)), 0).toFixed(2);
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><strong>#${order.id}</strong></td>
+      <td>${order.customerName || "Walk-in Guest"}</td>
+      <td>${itemsSummary}</td>
+      <td>₱${totalAmount}</td>
+      <td><span class="badge status-pending">${order.status}</span></td>
+      <td>${order.timestamp || new Date().toLocaleTimeString()}</td>
+      <td>
+        <button type="button" 
+                class="btn-action-status" 
+                onclick="transitionOrderStatus('${order.id}', 'CONFIRMED', 'Admin Confirmed')">
+          Confirm Order
+        </button>
+        <button type="button" 
+                class="btn-action-cancel" 
+                onclick="transitionOrderStatus('${order.id}', 'CANCELLED', 'Admin Cancelled')">
+          Cancel
+        </button>
+      </td>
+    `;
+    tableBody.appendChild(tr);
+  });
+}
+
+// Ensure renderAdminView runs within the render loop
+if (typeof renderApp === "function") {
+  const previousRenderApp = renderApp;
+  renderApp = function() {
+    previousRenderApp();
+    renderWorkflowView(); // Kitchen view (Staff)
+    renderAdminView();    // Admin Table View
+  };
+}
+
+/* Store Admin Table Styling */
+.table-container {
+  overflow-x: auto;
+  margin-top: 1rem;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.admin-orders-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.admin-orders-table th {
+  background-color: #f7fafc;
+  color: #2d3748;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.admin-orders-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #edf2f7;
+  color: #4a5568;
+}
+
+.admin-orders-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.empty-table-msg {
+  text-align: center;
+  color: #a0aec0;
+  font-style: italic;
+  padding: 2rem 1rem !important;
+}
+
+.btn-action-cancel {
+  background-color: #e53e3e;
+  color: #ffffff;
+  border: none;
+  padding: 0.4rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 0.25rem;
+}
+
+.btn-action-cancel:hover {
+  background-color: #c53030;
+}
+
